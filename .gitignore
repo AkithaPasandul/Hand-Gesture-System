@@ -1,0 +1,18 @@
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Dependencies
+node_modules/
+venv/
+env/
+
+# Build folders
+dist/
+build/
+
+# Secret files
+.env

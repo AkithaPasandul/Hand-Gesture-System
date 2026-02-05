@@ -5,18 +5,15 @@ import json
 import mediapipe as mp
 import numpy as np
 
-# -----------------------------
 # Paths
-# -----------------------------
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 CONFIG_PATH = os.path.join(BASE_DIR, "config", "gesture_list.json")
 DATASET_PATH = os.path.join(BASE_DIR, "dataset", "landmarks", "static")
 
 os.makedirs(DATASET_PATH, exist_ok=True)
 
-# -----------------------------
+
 # Load gesture mapping
-# -----------------------------
 with open(CONFIG_PATH, "r") as f:
     gesture_map = json.load(f)
 
@@ -28,9 +25,7 @@ key_to_gesture = {
     '3': gesture_map["3"]
 }
 
-# -----------------------------
 # MediaPipe setup
-# -----------------------------
 mp_hands = mp.solutions.hands
 hands = mp_hands.Hands(
     static_image_mode=False,
@@ -39,18 +34,14 @@ hands = mp_hands.Hands(
 )
 mp_draw = mp.solutions.drawing_utils
 
-# -----------------------------
 # Camera
-# -----------------------------
-cap = cv2.VideoCapture(0)
+cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
 
 print("Press keys to collect data:")
 print("0 → open_palm | 1 → fist | 2 → thumbs_up | 3 → peace")
 print("Press 'q' to quit")
 
-# -----------------------------
 # Main loop
-# -----------------------------
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
