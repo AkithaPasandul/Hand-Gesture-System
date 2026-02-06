@@ -1,88 +1,114 @@
 import cv2
-import csv
-import os
 import json
-import mediapipe as mp
+import os
 import numpy as np
 
-# Paths
-BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CONFIG_PATH = os.path.join(BASE_DIR, "config", "gesture_list.json")
-DATASET_PATH = os.path.join(BASE_DIR, "dataset", "landmarks", "static")
+from utils.onnx_hand_landmarks import ONNXHandLandmark
+from utils.feature_extractor import normalize_landmarks
 
-os.makedirs(DATASET_PATH, exist_ok=True)
+# -----------------------------
+# CONFIG
+# -----------------------------
+DATA_DIR = "data/raw"
+GESTURE_FILE = "configs/gesture_list.json"
+SAMPLES_PER_GESTURE = 200
 
+os.makedirs(DATA_DIR, exist_ok=True)
 
-# Load gesture mapping
-with open(CONFIG_PATH, "r") as f:
-    gesture_map = json.load(f)
+# -----------------------------
+# LOAD GESTURES
+# -----------------------------
+with open(GESTURE_FILE, "r") as f:
+    gestures = json.load(f)["gestures"]
 
-# Reverse mapping for keyboard control
-key_to_gesture = {
-    '0': gesture_map["0"],
-    '1': gesture_map["1"],
-    '2': gesture_map["2"],
-    '3': gesture_map["3"]
-}
+print("Gestures:", gestures)
 
-# MediaPipe setup
-mp_hands = mp.solutions.hands
-hands = mp_hands.Hands(
-    static_image_mode=False,
-    max_num_hands=1,
-    min_detection_confidence=0.7
-)
-mp_draw = mp.solutions.drawing_utils
+# -----------------------------
+# INIT MODEL & CAMERA
+# -----------------------------
+hand_model = ONNXHandLandmark("models/onnx/hand_landmark.onnx")
+cap = cv2.VideoCapture(0)
 
-# Camera
-cap = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+current_gesture = None
+collected = 0
+features_buffer = []
 
-print("Press keys to collect data:")
-print("0 → open_palm | 1 → fist | 2 → thumbs_up | 3 → peace")
-print("Press 'q' to quit")
+print("\nControls:")
+print("Press number key (1-9) to select gesture")
+print("Press 's' to save samples")
+print("Press 'q' to quit\n")
 
-# Main loop
+# -----------------------------
+# MAIN LOOP
+# -----------------------------
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
         break
 
     frame = cv2.flip(frame, 1)
-    rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    result = hands.process(rgb)
 
-    if result.multi_hand_landmarks:
-        for hand_landmarks in result.multi_hand_landmarks:
-            mp_draw.draw_landmarks(
-                frame,
-                hand_landmarks,
-                mp_hands.HAND_CONNECTIONS
-            )
+    landmarks = hand_model.predict(frame)
 
-            landmarks = []
-            for lm in hand_landmarks.landmark:
-                landmarks.extend([lm.x, lm.y, lm.z])
+    if landmarks is not None and current_gesture is not None:
+        features = normalize_landmarks(landmarks)
+        features_buffer.append(features)
+        collected += 1
 
-            key = cv2.waitKey(1) & 0xFF
-            if chr(key) in key_to_gesture:
-                gesture_name = key_to_gesture[chr(key)]
-                file_path = os.path.join(DATASET_PATH, f"{gesture_name}.csv")
+    # -----------------------------
+    # UI
+    # -----------------------------
+    cv2.putText(
+        frame,
+        f"Gesture: {current_gesture}",
+        (10, 30),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        1,
+        (0, 255, 0),
+        2
+    )
 
-                write_header = not os.path.exists(file_path)
+    cv2.putText(
+        frame,
+        f"Samples: {collected}/{SAMPLES_PER_GESTURE}",
+        (10, 70),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.8,
+        (255, 255, 0),
+        2
+    )
 
-                with open(file_path, "a", newline="") as f:
-                    writer = csv.writer(f)
-                    if write_header:
-                        header = [f"lm_{i}_{axis}" for i in range(21) for axis in ["x", "y", "z"]]
-                        writer.writerow(header)
-                    writer.writerow(landmarks)
+    cv2.imshow("Collect Hand Gesture Data", frame)
 
-                print(f"Saved sample for: {gesture_name}")
+    key = cv2.waitKey(1) & 0xFF
 
-    cv2.imshow("Data Collection", frame)
-
-    if cv2.waitKey(1) & 0xFF == ord('q'):
+    # -----------------------------
+    # KEY CONTROLS
+    # -----------------------------
+    if key == ord('q'):
         break
 
+    # Select gesture (1,2,3,4...)
+    if ord('1') <= key <= ord(str(len(gestures))):
+        idx = key - ord('1')
+        current_gesture = gestures[idx]
+        collected = 0
+        features_buffer = []
+        print(f"\nSelected gesture: {current_gesture}")
+
+    # Save samples
+    if key == ord('s') and current_gesture is not None:
+        if len(features_buffer) >= SAMPLES_PER_GESTURE:
+            save_path = os.path.join(DATA_DIR, f"{current_gesture}.npy")
+            np.save(save_path, np.array(features_buffer))
+            print(f"Saved {len(features_buffer)} samples to {save_path}")
+            collected = 0
+            features_buffer = []
+        else:
+            print("Not enough samples collected yet!")
+
+# -----------------------------
+# CLEANUP
+# -----------------------------
 cap.release()
 cv2.destroyAllWindows()
