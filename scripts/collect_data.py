@@ -6,26 +6,20 @@ import numpy as np
 from utils.onnx_hand_landmarks import ONNXHandLandmark
 from utils.feature_extractor import normalize_landmarks
 
-# -----------------------------
 # CONFIG
-# -----------------------------
 DATA_DIR = "data/raw"
 GESTURE_FILE = "configs/gesture_list.json"
 SAMPLES_PER_GESTURE = 200
 
 os.makedirs(DATA_DIR, exist_ok=True)
 
-# -----------------------------
-# LOAD GESTURES
-# -----------------------------
+# lOAD GESTURES
 with open(GESTURE_FILE, "r") as f:
     gestures = json.load(f)["gestures"]
 
 print("Gestures:", gestures)
 
-# -----------------------------
-# INIT MODEL & CAMERA
-# -----------------------------
+# INIT MODEL
 hand_model = ONNXHandLandmark("models/onnx/hand_landmark.onnx")
 cap = cv2.VideoCapture(0)
 
@@ -38,9 +32,7 @@ print("Press number key (1-9) to select gesture")
 print("Press 's' to save samples")
 print("Press 'q' to quit\n")
 
-# -----------------------------
 # MAIN LOOP
-# -----------------------------
 while cap.isOpened():
     ret, frame = cap.read()
     if not ret:
@@ -55,9 +47,7 @@ while cap.isOpened():
         features_buffer.append(features)
         collected += 1
 
-    # -----------------------------
     # UI
-    # -----------------------------
     cv2.putText(
         frame,
         f"Gesture: {current_gesture}",
@@ -82,9 +72,7 @@ while cap.isOpened():
 
     key = cv2.waitKey(1) & 0xFF
 
-    # -----------------------------
-    # KEY CONTROLS
-    # -----------------------------
+    # Quit
     if key == ord('q'):
         break
 
@@ -107,8 +95,6 @@ while cap.isOpened():
         else:
             print("Not enough samples collected yet!")
 
-# -----------------------------
-# CLEANUP
-# -----------------------------
+# Cleanup
 cap.release()
 cv2.destroyAllWindows()
