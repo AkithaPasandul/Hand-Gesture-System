@@ -1,8 +1,10 @@
 import cv2
 import joblib
 import numpy as np
+import json
 from collections import deque
 
+from utils.action_executor import ActionExecutor
 from utils.onnx_hand_landmarks import ONNXHandLandmark
 from utils.feature_extractor import normalize_landmarks
 
@@ -24,6 +26,14 @@ prediction_buffer = deque(maxlen=SMOOTHING_WINDOW)
 
 print("Starting real-time gesture recognition...")
 print("Press 'q' to quit")
+
+# Load action mapping
+with open("configs/gesture_actions.json") as f:
+    action_map = json.load(f)
+
+executor = ActionExecutor(action_map)
+last_executed = None
+
 
 # MAIN LOOP
 while cap.isOpened():
@@ -49,6 +59,11 @@ while cap.isOpened():
 
             # Majority voting
             display_text = max(set(prediction_buffer), key=prediction_buffer.count)
+            
+            # Execute action if gesture changes
+            if display_text != last_executed:
+                executor.execute(display_text)
+                last_executed = display_text
 
     # UI
     cv2.putText(
