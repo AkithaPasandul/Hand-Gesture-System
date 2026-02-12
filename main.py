@@ -6,7 +6,6 @@ import sys
 def run_script(module_name):
     subprocess.run([sys.executable, "-m", module_name])
 
-
 def main():
     parser = argparse.ArgumentParser(
         description="Real-Time Hand Gesture Recognition System"
@@ -34,3 +33,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
