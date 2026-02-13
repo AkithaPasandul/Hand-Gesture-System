@@ -1,36 +1,83 @@
-import argparse
-import subprocess
-import sys
+import cv2
+import time
+from utils.detector import YOLOv8HandDetector
+from utils.landmark_model import HandLandmarkModel
 
+# CONFIG
+DETECTOR_MODEL_PATH = "models/hand_detector.onnx"
+LANDMARK_MODEL_PATH = "models/hand_landmarks.onnx"
+landmark_model = HandLandmarkModel(LANDMARK_MODEL_PATH)
 
-def run_script(module_name):
-    subprocess.run([sys.executable, "-m", module_name])
+# INIT
+detector = YOLOv8HandDetector(DETECTOR_MODEL_PATH)
 
-def main():
-    parser = argparse.ArgumentParser(
-        description="Real-Time Hand Gesture Recognition System"
+cap = cv2.VideoCapture(0)
+
+if not cap.isOpened():
+    print("Could not open camera.")
+    exit()
+
+prev_time = 0
+
+# MAIN LOOP
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        print("Failed to grab frame.")
+        break
+
+    start_time = time.time()
+
+    # Detect hands
+    boxes = detector.detect(frame)
+
+    # Draw detections
+    for box in boxes:
+        x1, y1, x2, y2 = box
+
+        # Safety clamp
+        x1 = max(0, x1)
+        y1 = max(0, y1)
+        x2 = min(frame.shape[1], x2)
+        y2 = min(frame.shape[0], y2)
+
+        # Draw rectangle
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
+        # Crop hand
+        hand_crop = frame[y1:y2, x1:x2]
+
+        # Show cropped hand in corner (debug)
+        if hand_crop.size != 0:
+            landmarks = landmark_model.predict(hand_crop)
+            
+            if landmarks is not None:
+                for lm in landmarks:
+                    lx = int(x1 + lm[0] * (x2 - x1))
+                    ly = int(y1 + lm[1] * (y2 - y1))
+                    
+                    cv2.circle(frame, (lx, ly), 4, (0, 0, 255), -1)
+                    
+    # FPS Calculation
+    curr_time = time.time()
+    fps = 1 / (curr_time - prev_time) if prev_time != 0 else 0
+    prev_time = curr_time
+
+    cv2.putText(
+        frame,
+        f"FPS: {int(fps)}",
+        (10, frame.shape[0] - 20),
+        cv2.FONT_HERSHEY_SIMPLEX,
+        0.7,
+        (0, 255, 0),
+        2
     )
 
-    parser.add_argument(
-        "--mode",
-        type=str,
-        required=True,
-        choices=["collect", "train", "run"],
-        help="Mode to run the system"
-    )
+    cv2.imshow("Hand Gesture System - YOLOv8", frame)
 
-    args = parser.parse_args()
+    if cv2.waitKey(1) & 0xFF == 27:  # ESC key
+        break
 
-    if args.mode == "collect":
-        run_script("scripts.collect_data")
-
-    elif args.mode == "train":
-        run_script("scripts.train_model")
-
-    elif args.mode == "run":
-        run_script("scripts.realtime_inference")
-
-
-if __name__ == "__main__":
-    main()
-
+# Cleanup
+cap.release()
+cv2.destroyAllWindows()
