@@ -2,11 +2,15 @@ import cv2
 import time
 from utils.detector import YOLOv8HandDetector
 from utils.landmark_model import HandLandmarkModel
+from utils.feature_extractor import normalize_landmarks
+from utils.classifier import GestureClassifier
 
 # CONFIG
 DETECTOR_MODEL_PATH = "models/hand_detector.onnx"
 LANDMARK_MODEL_PATH = "models/hand_landmarks.onnx"
+CLASSIFIER_PATH = "models/gesture_classifier.pkl"
 landmark_model = HandLandmarkModel(LANDMARK_MODEL_PATH)
+classifier = GestureClassifier(CLASSIFIER_PATH)
 
 # INIT
 detector = YOLOv8HandDetector(DETECTOR_MODEL_PATH)
@@ -52,11 +56,24 @@ while True:
             landmarks = landmark_model.predict(hand_crop)
             
             if landmarks is not None:
+                
                 for lm in landmarks:
                     lx = int(x1 + lm[0] * (x2 - x1))
-                    ly = int(y1 + lm[1] * (y2 - y1))
-                    
+                    ly = int(y1 + lm[1] * (y2 - y1))                 
                     cv2.circle(frame, (lx, ly), 4, (0, 0, 255), -1)
+                    
+                features = normalize_landmarks(landmarks)
+                gesture = classifier.predict(features)
+                
+                cv2.putText(
+                    frame,
+                    f"Gesture: {gesture}",
+                    (x1, y1 - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.9,
+                    (0, 255, 255),
+                    2
+                )
                     
     # FPS Calculation
     curr_time = time.time()

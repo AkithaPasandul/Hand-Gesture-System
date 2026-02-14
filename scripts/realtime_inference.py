@@ -5,7 +5,7 @@ import time
 import numpy as np
 from collections import deque
 
-from utils.onnx_hand_landmarks import ONNXHandLandmark
+from utils.landmark_model import ONNXHandLandmark
 from utils.feature_extractor import normalize_landmarks
 from utils.action_executor import ActionExecutor
 

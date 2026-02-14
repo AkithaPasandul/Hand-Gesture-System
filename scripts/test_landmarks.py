@@ -1,5 +1,5 @@
 import cv2
-from utils.onnx_hand_landmarks import ONNXHandLandmark
+from utils.landmark_model import ONNXHandLandmark
 
 model = ONNXHandLandmark("models/hand_landmark.onnx")
 cap = cv2.VideoCapture(0)

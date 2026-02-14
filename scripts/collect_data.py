@@ -3,7 +3,7 @@ import json
 import os
 import numpy as np
 
-from utils.onnx_hand_landmarks import ONNXHandLandmark
+from utils.landmark_model import ONNXHandLandmark
 from utils.feature_extractor import normalize_landmarks
 
 # CONFIG
