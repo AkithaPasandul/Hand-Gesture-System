@@ -1,17 +1,15 @@
 import numpy as np
 
 def normalize_landmarks(landmarks):
-    landmarks = np.array(landmarks)
+    # Use wrist (index 0) as origin
+    base = landmarks[0]
 
-    # If flattened (63,), reshape it
-    if landmarks.ndim == 1:
-        landmarks = landmarks.reshape(21, 3)
+    normalized = landmarks - base
 
-    origin = landmarks[0]
-    landmarks = landmarks - origin
+    # Scale by max distance (scale invariance)
+    max_dist = np.max(np.linalg.norm(normalized, axis=1))
 
-    max_dist = np.max(np.linalg.norm(landmarks, axis=1))
     if max_dist > 0:
-        landmarks = landmarks / max_dist
+        normalized = normalized / max_dist
 
-    return landmarks.flatten()
+    return normalized.flatten()
