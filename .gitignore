@@ -16,3 +16,10 @@ build/
 
 # Secret files
 .env
+
+# IDE files
+.idea/
+
+# Python bytecode
+__pycache__/
+*.pyc

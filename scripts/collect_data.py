@@ -5,7 +5,7 @@ from utils.detector import YOLOv8HandDetector
 from utils.landmark_model import HandLandmarkModel
 from utils.feature_extractor import normalize_landmarks
 
-DETECTOR_MODEL = "models/hand_detector.onnx"
+DETECTOR_MODEL = "models/MediaPipeHandDetector.onnx"
 LANDMARK_MODEL = "models/hand_landmarks.onnx"
 
 SAVE_PATH = "data"
