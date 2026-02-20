@@ -1,5 +1,6 @@
 import cv2
 import time
+from collections import deque, Counter
 from utils.detector import YOLOv8HandDetector
 from utils.landmark_model import HandLandmarkModel
 from utils.feature_extractor import normalize_landmarks
@@ -22,6 +23,7 @@ if not cap.isOpened():
     exit()
 
 prev_time = 0
+prediction_buffer = deque(maxlen=10)
 
 # MAIN LOOP
 while True:
@@ -64,6 +66,11 @@ while True:
                     
                 features = normalize_landmarks(landmarks)
                 gesture = classifier.predict(features)
+                prediction_buffer.append(gesture)
+                
+                # Majority vote smoothing
+                most_common = Counter(prediction_buffer).most_common(1)[0][0]
+                gesture = most_common
                 
                 cv2.putText(
                     frame,
